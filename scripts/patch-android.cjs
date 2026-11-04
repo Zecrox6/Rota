@@ -60,3 +60,15 @@ for (const file of ["mipmap-anydpi-v26/ic_launcher.xml", "mipmap-anydpi-v26/ic_l
         )
   );
 }
+
+// 4 : le clavier redimensionne l'app au lieu de faire glisser toute la fenêtre
+{
+  const manifest = path.join(__dirname, "..", "android", "app", "src", "main", "AndroidManifest.xml");
+  const xml = fs.readFileSync(manifest, "utf8");
+  if (!xml.includes("windowSoftInputMode")) {
+    const out = xml.replace('android:name=".MainActivity"', 'android:name=".MainActivity"\n            android:windowSoftInputMode="adjustResize"');
+    if (out === xml) throw new Error("MainActivity introuvable dans AndroidManifest.xml");
+    fs.writeFileSync(manifest, out);
+  }
+  console.log("✓ AndroidManifest.xml (clavier)");
+}

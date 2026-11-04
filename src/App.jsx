@@ -122,9 +122,10 @@ const CATEGORIES = [
   { key: "visionnage", label: "Visionnage", Icon: Clapperboard },
 ];
 const PLATFORM_PRESETS = ["PS5", "PS4", "Switch", "PC", "Xbox", "Mobile"];
+const ADD_PLACEHOLDER = { jeux: "Ajouter un jeu", lecture: "Ajouter une lecture", visionnage: "Ajouter un visionnage" };
 const SORT_LABELS = { manual: "Ordre perso", alpha: "A-Z", completion: "Progression" };
 const WINDOW = 8; // éléments affichés par catégorie avant « Voir les autres »
-const SWIPE_OPEN = -156;
+const SWIPE_OPEN = -128;
 
 // Forme « cookie » (Material 3 Expressive), viewBox 48×48
 const COOKIE =
@@ -460,11 +461,21 @@ function WaveProgress({ value, lc, moving }) {
 }
 
 function Field({ icon, value, onChange, placeholder, T, autoFocus, onEnter }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!autoFocus) return;
+    const t = setTimeout(() => {
+      try {
+        ref.current && ref.current.focus({ preventScroll: true });
+      } catch (e) {}
+    }, 320);
+    return () => clearTimeout(t);
+  }, [autoFocus]);
   return (
     <div className="flex items-center gap-3 rounded-2xl px-4 min-w-0" style={{ height: 52, background: T.surfaceContainerHighest }}>
       {icon}
       <input
-        autoFocus={autoFocus}
+        ref={ref}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && onEnter && onEnter()}
@@ -527,6 +538,16 @@ function StatusNode({ status, lc, T }) {
 
 // --- Une étape de la chronologie (jeu, livre ou film) ---
 const GameRow = memo(function GameRow({ g, fid, catKey, lc, T, query, dragging, justAdded, topLine, bottomLine, compact, swipeOpen, act, refs }) {
+  const nodeRef = useRef(null);
+  const prevStatus = useRef(g.status);
+  useEffect(() => {
+    if (prevStatus.current === g.status) return;
+    prevStatus.current = g.status;
+    const el = nodeRef.current;
+    if (el && el.animate) {
+      el.animate([{ transform: "scale(0.55)" }, { transform: "scale(1.18)" }, { transform: "scale(1)" }], { duration: 340, easing: "cubic-bezier(0.2,0,0,1)" });
+    }
+  }, [g.status]);
   const playing = g.status === "playing";
   const done = g.status === "done";
   const nextStatus = ORDER[(ORDER.indexOf(g.status) + 1) % ORDER.length];
@@ -548,7 +569,9 @@ const GameRow = memo(function GameRow({ g, fid, catKey, lc, T, query, dragging, 
           className="shrink-0 flex items-center justify-center"
           style={{ width: 28, height: 28, margin: "-4px 0", background: "transparent", position: "relative", zIndex: 1 }}
         >
-          <StatusNode status={g.status} lc={lc} T={T} />
+          <span ref={nodeRef} className="flex">
+            <StatusNode status={g.status} lc={lc} T={T} />
+          </span>
         </button>
         <div style={{ width: 2, flex: "1 1 0", background: bottomLine }} />
       </div>
@@ -571,16 +594,16 @@ const GameRow = memo(function GameRow({ g, fid, catKey, lc, T, query, dragging, 
             aria-label="Modifier"
             tabIndex={swipeOpen ? 0 : -1}
             className="m3-btn flex items-center justify-center rounded-full"
-            style={{ width: 44, height: 44, background: lc.c3, color: lc.text }}
+            style={{ width: 36, height: 36, background: lc.c3, color: lc.text }}
           >
-            <Pencil size={18} />
+            <Pencil size={16} />
           </button>
           <button
             onClick={() => act.duplicateGame(fid, g.id)}
             aria-label="Dupliquer"
             tabIndex={swipeOpen ? 0 : -1}
             className="m3-btn flex items-center justify-center rounded-full"
-            style={{ width: 44, height: 44, background: T.surfaceContainerHighest, color: T.onSurface }}
+            style={{ width: 36, height: 36, background: T.surfaceContainerHighest, color: T.onSurface }}
           >
             <Copy size={18} />
           </button>
@@ -589,7 +612,7 @@ const GameRow = memo(function GameRow({ g, fid, catKey, lc, T, query, dragging, 
             aria-label="Supprimer"
             tabIndex={swipeOpen ? 0 : -1}
             className="m3-btn flex items-center justify-center rounded-full"
-            style={{ width: 44, height: 44, background: "#5C1A1A", color: T.danger }}
+            style={{ width: 36, height: 36, background: "#5C1A1A", color: T.danger }}
           >
             <Trash2 size={18} />
           </button>
@@ -704,7 +727,10 @@ const FranchiseCard = memo(function FranchiseCard(p) {
   const upNext = nextStep(f.games);
   const typed = newGameInput.trim().toLowerCase();
   const isDup = !!typed && f.games.some((g) => g.name.trim().toLowerCase() === typed);
-  const catLabel = CATEGORIES.find((c) => c.key === activeCategory).label;
+  const catIdx = CATEGORIES.findIndex((c) => c.key === activeCategory);
+  const catLabel = CATEGORIES[catIdx].label;
+  const CatIcon = CATEGORIES[catIdx].Icon;
+  const nextCat = CATEGORIES[(catIdx + 1) % CATEGORIES.length];
   const hl = { bg: lc.c3, fg: lc.text };
 
   return (
@@ -723,7 +749,7 @@ const FranchiseCard = memo(function FranchiseCard(p) {
       {full && (
         <>
           <Sparkles size={14} color={lc.accent} style={{ position: "absolute", left: compact ? 44 : 52, top: compact ? 4 : 8, pointerEvents: "none" }} aria-hidden="true" />
-          <Sparkles size={10} color={T.success} style={{ position: "absolute", left: 10, bottom: 10, pointerEvents: "none" }} aria-hidden="true" />
+          <Sparkles size={10} color={T.success} style={{ position: "absolute", left: 10, top: compact ? 40 : 52, pointerEvents: "none" }} aria-hidden="true" />
         </>
       )}
       {celebrate && (
@@ -859,40 +885,26 @@ const FranchiseCard = memo(function FranchiseCard(p) {
             </span>
           )}
 
-          {/* Ajout d'un élément */}
-          <div className="flex flex-col gap-2" style={{ marginTop: 4 }}>
-            <div className="flex rounded-full overflow-hidden" style={{ height: 36, border: `1px solid ${T.outlineVariant}` }}>
-              {CATEGORIES.map((cat, idx) => {
-                const on = activeCategory === cat.key;
-                return (
-                  <button
-                    key={cat.key}
-                    onClick={() => act.setNewGameCat(f.id, cat.key)}
-                    className="m3-btn flex-1 min-w-0 flex items-center justify-center gap-1"
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 500,
-                      background: on ? lc.c3 : "transparent",
-                      color: on ? lc.text : T.onSurfaceVariant,
-                      borderLeft: idx === 0 ? "none" : `1px solid ${T.outlineVariant}`,
-                      transition: "background-color 200ms ease, color 200ms ease",
-                    }}
-                  >
-                    {on && <Check size={14} />}
-                    {cat.label}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="flex items-center gap-1 rounded-full pl-4 min-w-0" style={{ height: 48, paddingRight: 4, background: lc.c1 }}>
+          {/* Ajout d'un élément : icône de catégorie (toucher pour changer), champ, options */}
+          <div className="flex flex-col gap-2" style={{ marginTop: 6 }}>
+            <div className="flex items-center gap-1 rounded-full min-w-0" style={{ height: 52, padding: "0 6px", background: lc.c1 }}>
+              <button
+                onClick={() => act.setNewGameCat(f.id, nextCat.key)}
+                aria-label={`Catégorie : ${catLabel} (toucher pour changer)`}
+                className="m3-btn press shrink-0 rounded-full flex items-center justify-center"
+                style={{ width: 40, height: 40, background: lc.c3, color: lc.text }}
+              >
+                <span key={activeCategory} className="flex" style={{ animation: `popIn 220ms ${EASE}` }}>
+                  <CatIcon size={18} />
+                </span>
+              </button>
               <input
                 value={newGameInput}
                 onChange={(e) => act.setNewGameInput(f.id, e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && act.addGame(f.id)}
-                placeholder={`Ajouter à « ${catLabel} »`}
+                placeholder={ADD_PLACEHOLDER[activeCategory]}
                 className="flex-1 min-w-0 bg-transparent outline-none"
-                style={{ color: T.onSurface, fontSize: 15 }}
+                style={{ color: T.onSurface, fontSize: 15, paddingLeft: 8 }}
               />
               <button
                 onClick={() => act.toggleLinkField(f.id)}
@@ -959,20 +971,21 @@ const FranchiseCard = memo(function FranchiseCard(p) {
             </Collapse>
           </div>
 
-          <div className="grid pt-2" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", borderTop: `1px solid ${lc.c2}` }}>
+          {/* Actions de la licence */}
+          <div className="flex items-center gap-2">
             {[
-              { icon: <Pencil size={18} />, label: "Modifier", onClick: () => act.rename(f) },
-              { icon: f.paused ? <Play size={18} /> : <Pause size={18} />, label: f.paused ? "Reprendre" : "Pause", onClick: () => act.togglePause(f.id) },
-              { icon: <Trash2 size={18} />, label: "Supprimer", onClick: () => act.askDeleteFranchise(f), danger: true },
+              { icon: <Pencil size={16} />, label: "Modifier", onClick: () => act.rename(f) },
+              { icon: f.paused ? <Play size={16} /> : <Pause size={16} />, label: f.paused ? "Reprendre" : "Pause", onClick: () => act.togglePause(f.id) },
+              { icon: <Trash2 size={16} />, label: "Supprimer", onClick: () => act.askDeleteFranchise(f), danger: true },
             ].map((a) => (
               <button
                 key={a.label}
                 onClick={a.onClick}
-                className="m3-btn flex flex-col items-center justify-center gap-1 rounded-2xl min-w-0"
-                style={{ height: 56, color: a.danger ? T.danger : T.onSurfaceVariant }}
+                className="m3-btn press flex-1 min-w-0 flex items-center justify-center gap-1.5 rounded-full"
+                style={{ height: 40, background: lc.c1, color: a.danger ? T.danger : T.onSurfaceVariant, fontSize: 13, fontWeight: 600 }}
               >
                 {a.icon}
-                <span style={{ fontSize: 12, fontWeight: 500 }}>{a.label}</span>
+                <span className="truncate">{a.label}</span>
               </button>
             ))}
           </div>
@@ -1150,6 +1163,7 @@ export default function App() {
   const [platforms, setPlatforms] = useState(PLATFORM_PRESETS);
   const [newPlatformInput, setNewPlatformInput] = useState("");
   const [openSetting, setOpenSetting] = useState(null);
+  const [navDir, setNavDir] = useState("none");
   const [swipeOpenId, setSwipeOpenId] = useState(null);
   const [celebrateId, setCelebrateId] = useState(null);
 
@@ -1300,6 +1314,26 @@ export default function App() {
     setNewPlatformInput("");
   }
 
+  useEffect(() => {
+    let t = null;
+    const onFocus = (e) => {
+      const el = e.target;
+      if (!el || el.tagName !== "INPUT" || el.type === "file") return;
+      if (el.closest('[style*="position: fixed"]')) return;
+      clearTimeout(t);
+      t = setTimeout(() => {
+        try {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        } catch (err) {}
+      }, 350);
+    };
+    document.addEventListener("focusin", onFocus);
+    return () => {
+      document.removeEventListener("focusin", onFocus);
+      clearTimeout(t);
+    };
+  }, []);
+
   // Ferme les actions d'une ligne glissée quand on touche ailleurs
   useEffect(() => {
     if (!swipeOpenId) return;
@@ -1319,7 +1353,7 @@ export default function App() {
     if (randomPick) return setRandomPick(null), true;
     if (showOptions) return setShowOptions(false), true;
     if (swipeOpenId) return setSwipeOpenId(null), true;
-    if (view === "settings") return setView("home"), true;
+    if (view === "settings") return closeSettings(), true;
     if (searchQuery) return setSearchQuery(""), true;
     return false;
   };
@@ -1331,10 +1365,12 @@ export default function App() {
 
   function openSettings() {
     homeScrollRef.current = window.scrollY;
+    setNavDir("forward");
     setView("settings");
   }
 
   function closeSettings() {
+    setNavDir("back");
     setView("home");
   }
 
@@ -1503,6 +1539,15 @@ export default function App() {
 
   function confirmDeleteNow() {
     if (!confirmDelete) return;
+    const before = franchisesRef.current;
+    offerUndo(
+      before,
+      confirmDelete.type === "all"
+        ? "Toutes les licences ont été effacées"
+        : confirmDelete.type === "franchise"
+        ? `Licence « ${confirmDelete.label} » supprimée`
+        : `« ${confirmDelete.label} » supprimé`
+    );
     if (confirmDelete.type === "all") {
       persist([]);
     } else if (confirmDelete.type === "franchise") {
@@ -1579,7 +1624,6 @@ export default function App() {
           }
     );
     persist(next);
-    offerUndo(list, label);
     if (!celebrateIfDone(list, next, fid)) buzz("light");
   }
 
@@ -1599,7 +1643,6 @@ export default function App() {
     });
     const next = list.map((fr) => (fr.id === fid ? { ...fr, games } : fr));
     persist(next);
-    offerUndo(list, `${current.name} : Terminé`);
     if (!celebrateIfDone(list, next, fid)) buzz("light");
   }
 
@@ -2011,7 +2054,8 @@ export default function App() {
         @keyframes popIn { from { opacity: 0; transform: scale(0.88); } to { opacity: 1; transform: scale(1); } }
         @keyframes diceRoll { 0% { transform: rotate(0deg) scale(0.5); opacity: 0.4; } 60% { transform: rotate(300deg) scale(1.15); opacity: 1; } 100% { transform: rotate(360deg) scale(1); } }
         @keyframes itemIn { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: none; } }
-        @keyframes viewIn { from { opacity: 0; transform: translate3d(24px,0,0); } to { opacity: 1; transform: none; } }
+        @keyframes viewIn { from { opacity: 0; transform: translate3d(32px,0,0); } to { opacity: 1; transform: none; } }
+        @keyframes viewBack { from { opacity: 0; transform: translate3d(-32px,0,0); } to { opacity: 1; transform: none; } }
         @keyframes homeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes liftIn { from { transform: scale(1); box-shadow: 0 0 0 rgba(0,0,0,0); } to { transform: scale(1.03); box-shadow: 0 12px 32px rgba(0,0,0,0.6); } }
         .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
@@ -2020,7 +2064,7 @@ export default function App() {
       `}</style>
 
       {view === "home" ? (
-        <div key="home" style={{ animation: "homeIn 200ms ease" }}>
+        <div key="home" style={{ animation: navDir === "back" ? `viewBack 320ms ${EASE}` : "homeIn 240ms ease" }}>
           <header
             className="sticky top-0 z-30"
             style={{ background: scrolled ? T.surfaceContainer : T.surface, transition: "background-color 220ms ease", paddingTop: "env(safe-area-inset-top)" }}
@@ -2134,7 +2178,7 @@ export default function App() {
                         <span style={{ fontSize: 20, fontWeight: 700, lineHeight: "26px", flex: "1 1 auto", overflowWrap: "anywhere" }}>{g.name}</span>
                         <div className="flex items-center gap-3 min-w-0">
                           <span className="flex-1 min-w-0" style={{ fontSize: 12, lineHeight: "16px", opacity: 0.85 }}>
-                            {doneCount}/{f.games.length} · {follow ? `ensuite : ${follow.name}` : "dernier de la liste"}
+                            {doneCount}/{f.games.length} · {follow ? `Ensuite : ${follow.name}` : "Dernier de la liste"}
                           </span>
                           <button
                             onClick={(e) => {
@@ -2214,7 +2258,7 @@ export default function App() {
           </main>
         </div>
       ) : (
-        <div key="settings" style={{ animation: `viewIn 260ms ${EASE}` }}>
+        <div key="settings" style={{ animation: `viewIn 320ms ${EASE}` }}>
           <header
             className="sticky top-0 z-30"
             style={{ background: scrolled ? T.surfaceContainer : T.surface, transition: "background-color 220ms ease", paddingTop: "env(safe-area-inset-top)" }}
@@ -2629,8 +2673,9 @@ export default function App() {
               maxWidth: 448,
               minHeight: 48,
               borderRadius: 12,
-              background: "#E6E1E5",
-              color: "#313033",
+              background: T.surfaceContainerHighest,
+              color: T.onSurface,
+              border: `1px solid ${T.outlineVariant}`,
               padding: "4px 4px 4px 16px",
               boxShadow: "0 6px 20px rgba(0,0,0,0.5)",
               animation: `snackIn 240ms ${EASE}`,
@@ -2639,7 +2684,7 @@ export default function App() {
             <span className="flex-1 min-w-0 truncate" style={{ fontSize: 14, lineHeight: "20px" }}>
               {undo.label}
             </span>
-            <button onClick={doUndo} className="m3-btn shrink-0 rounded-full" style={{ height: 40, padding: "0 12px", fontSize: 14, fontWeight: 700, color: T.onPrimary === "#2E2E2E" ? "#2E2E2E" : T.primaryContainer }}>
+            <button onClick={doUndo} className="m3-btn shrink-0 rounded-full" style={{ height: 40, padding: "0 12px", fontSize: 14, fontWeight: 700, color: T.primary }}>
               Annuler
             </button>
           </div>
