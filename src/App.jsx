@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef, useMemo, useDeferredValue, memo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useDeferredValue, memo, Children } from "react";
 import { createPortal } from "react-dom";
 import {
   Plus,
@@ -36,6 +36,14 @@ import {
   SlidersHorizontal,
   StickyNote,
   AlertCircle,
+  Palette,
+  LayoutList,
+  Vibrate,
+  BellRing,
+  Hand,
+  Info,
+  Eraser,
+  ChevronRight,
 } from "lucide-react";
 
 const LOGO_DATA_URI = "data:image/png;base64,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";
@@ -209,7 +217,34 @@ async function exportFile(name, text) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   return true;
 }
+
+// Geste / bouton retour Android : handler() renvoie true s'il a géré le retour
+function onBackButton(handler) {
+  let remove = null;
+  let cancelled = false;
+  (async () => {
+    try {
+      const { Capacitor } = await import("@capacitor/core");
+      if (!Capacitor.isNativePlatform()) return;
+      const { App } = await import("@capacitor/app");
+      const h = await App.addListener("backButton", () => {
+        if (!handler()) App.minimizeApp();
+      });
+      if (cancelled) h.remove();
+      else remove = () => h.remove();
+    } catch (e) {}
+  })();
+  return () => {
+    cancelled = true;
+    if (remove) remove();
+  };
+}
 // @@PLATFORM_END
+
+let hapticsEnabled = true;
+function buzz(kind) {
+  if (hapticsEnabled) haptic(kind);
+}
 
 function highlightMatch(text, query, color) {
   const q = query.trim();
@@ -441,10 +476,10 @@ function Field({ icon, value, onChange, placeholder, T, autoFocus, onEnter }) {
   );
 }
 
-function PlatformChips({ value, onPick, T, selBg, selText }) {
+function PlatformChips({ value, onPick, T, selBg, selText, presets }) {
   return (
     <div className="flex flex-wrap gap-2">
-      {PLATFORM_PRESETS.map((p) => {
+      {(presets || PLATFORM_PRESETS).map((p) => {
         const on = value === p;
         return (
           <button
@@ -652,6 +687,7 @@ const FranchiseCard = memo(function FranchiseCard(p) {
     swipeOpenId,
     celebrate,
     compact,
+    platforms,
     act,
     refs,
   } = p;
@@ -918,7 +954,7 @@ const FranchiseCard = memo(function FranchiseCard(p) {
                     style={{ color: T.onSurface, fontSize: 14 }}
                   />
                 </div>
-                <PlatformChips value={newGamePlatform} onPick={(v) => act.setNewGamePlatform(f.id, v)} T={T} selBg={lc.c3} selText={lc.text} />
+                <PlatformChips value={newGamePlatform} onPick={(v) => act.setNewGamePlatform(f.id, v)} T={T} selBg={lc.c3} selText={lc.text} presets={platforms} />
               </div>
             </Collapse>
           </div>
@@ -977,6 +1013,58 @@ function Switch({ on, T }) {
       />
     </span>
   );
+}
+
+// --- Briques de la page Paramètres (style Android 16) ---
+function SettingsGroup({ children, T }) {
+  const items = Children.toArray(children).filter(Boolean);
+  return (
+    <div className="flex flex-col" style={{ gap: 2 }}>
+      {items.map((child, i) => {
+        const first = i === 0;
+        const last = i === items.length - 1;
+        const r = (a) => (a ? 24 : 6);
+        return (
+          <div
+            key={i}
+            className="overflow-hidden"
+            style={{
+              background: T.surfaceContainer,
+              borderTopLeftRadius: r(first),
+              borderTopRightRadius: r(first),
+              borderBottomLeftRadius: r(last),
+              borderBottomRightRadius: r(last),
+            }}
+          >
+            {child}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SettingRow({ icon, tint, title, sub, right, onClick, danger, T }) {
+  return (
+    <button
+      onClick={onClick}
+      className="m3-btn w-full flex items-center text-left"
+      style={{ minHeight: 72, gap: 16, padding: "8px 16px", color: danger ? T.danger : T.onSurface }}
+    >
+      <span className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 40, height: 40, background: tint.bg, color: tint.fg }}>
+        {icon}
+      </span>
+      <span className="flex flex-col flex-1 min-w-0">
+        <span style={{ fontSize: 16, lineHeight: "22px" }}>{title}</span>
+        {sub && <span style={{ fontSize: 13, lineHeight: "18px", color: T.onSurfaceVariant }}>{sub}</span>}
+      </span>
+      {right}
+    </button>
+  );
+}
+
+function SectionLabel({ children, T }) {
+  return <div style={{ fontSize: 14, fontWeight: 600, color: T.primary, margin: "24px 16px 8px" }}>{children}</div>;
 }
 
 function IconBtn({ onClick, label, T, children, size = 48 }) {
@@ -1056,6 +1144,12 @@ export default function App() {
   const [lastBackup, setLastBackup] = useState(null);
   const [backupSnooze, setBackupSnooze] = useState(0);
   const undoTimer = useRef(null);
+  const [showCarouselPref, setShowCarouselPref] = useState(true);
+  const [hapticsOn, setHapticsOn] = useState(true);
+  const [backupReminder, setBackupReminder] = useState(true);
+  const [platforms, setPlatforms] = useState(PLATFORM_PRESETS);
+  const [newPlatformInput, setNewPlatformInput] = useState("");
+  const [openSetting, setOpenSetting] = useState(null);
   const [swipeOpenId, setSwipeOpenId] = useState(null);
   const [celebrateId, setCelebrateId] = useState(null);
 
@@ -1148,6 +1242,15 @@ export default function App() {
       const z = Number(await store.get("rota-backup-snooze"));
       if (z > 0) setBackupSnooze(z);
     })();
+    (async () => {
+      if ((await store.get("rota-carousel")) === "0") setShowCarouselPref(false);
+      if ((await store.get("rota-haptics")) === "0") setHapticsOn(false);
+      if ((await store.get("rota-backup-reminder")) === "0") setBackupReminder(false);
+      try {
+        const pl = JSON.parse((await store.get("rota-platforms")) || "null");
+        if (Array.isArray(pl)) setPlatforms(pl.filter((x) => typeof x === "string"));
+      } catch (e) {}
+    })();
   }, []);
 
   useEffect(() => {
@@ -1176,6 +1279,27 @@ export default function App() {
     return () => el.removeEventListener("touchmove", block);
   }, [view]);
 
+  useEffect(() => {
+    hapticsEnabled = hapticsOn;
+  }, [hapticsOn]);
+
+  function toggleSetting(key, value, setter) {
+    setter(value);
+    store.set(key, value ? "1" : "0");
+  }
+
+  function savePlatforms(list) {
+    setPlatforms(list);
+    store.set("rota-platforms", JSON.stringify(list));
+  }
+
+  function addPlatform() {
+    const v = newPlatformInput.trim();
+    if (!v) return;
+    if (!platforms.some((x) => x.toLowerCase() === v.toLowerCase())) savePlatforms([...platforms, v]);
+    setNewPlatformInput("");
+  }
+
   // Ferme les actions d'une ligne glissée quand on touche ailleurs
   useEffect(() => {
     if (!swipeOpenId) return;
@@ -1187,14 +1311,19 @@ export default function App() {
     return () => window.removeEventListener("pointerdown", onDown, true);
   }, [swipeOpenId]);
 
-  // --- Navigation Paramètres ---
-  useEffect(() => {
-    function onPopState() {
-      setView("home");
-    }
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, []);
+  // --- Geste retour Android : ferme d'abord ce qui est ouvert, puis revient à l'accueil ---
+  const backRef = useRef(null);
+  backRef.current = () => {
+    if (sheet) return setSheet(null), true;
+    if (confirmDelete) return setConfirmDelete(null), true;
+    if (randomPick) return setRandomPick(null), true;
+    if (showOptions) return setShowOptions(false), true;
+    if (swipeOpenId) return setSwipeOpenId(null), true;
+    if (view === "settings") return setView("home"), true;
+    if (searchQuery) return setSearchQuery(""), true;
+    return false;
+  };
+  useEffect(() => onBackButton(() => backRef.current()), []);
 
   useLayoutEffect(() => {
     window.scrollTo(0, view === "settings" ? 0 : homeScrollRef.current);
@@ -1202,19 +1331,10 @@ export default function App() {
 
   function openSettings() {
     homeScrollRef.current = window.scrollY;
-    try {
-      window.history.pushState({ view: "settings" }, "");
-    } catch (e) {}
     setView("settings");
   }
 
   function closeSettings() {
-    try {
-      if (window.history.state && window.history.state.view === "settings") {
-        window.history.back();
-        return;
-      }
-    } catch (e) {}
     setView("home");
   }
 
@@ -1298,7 +1418,7 @@ export default function App() {
     clearTimeout(undoTimer.current);
     persist(undo.prev);
     setUndo(null);
-    haptic("light");
+    buzz("light");
   }
 
   // --- Fête quand une licence passe à 100 % ---
@@ -1306,7 +1426,7 @@ export default function App() {
     const b = before.find((f) => f.id === fid);
     const a = next.find((f) => f.id === fid);
     if (a && b && !isFullyDone(b) && isFullyDone(a)) {
-      haptic("success");
+      buzz("success");
       setCelebrateId(fid);
       setTimeout(() => setCelebrateId((cur) => (cur === fid ? null : cur)), 1300);
       return true;
@@ -1383,7 +1503,9 @@ export default function App() {
 
   function confirmDeleteNow() {
     if (!confirmDelete) return;
-    if (confirmDelete.type === "franchise") {
+    if (confirmDelete.type === "all") {
+      persist([]);
+    } else if (confirmDelete.type === "franchise") {
       persist(franchisesRef.current.filter((f) => f.id !== confirmDelete.franchiseId));
     } else {
       persist(
@@ -1458,7 +1580,7 @@ export default function App() {
     );
     persist(next);
     offerUndo(list, label);
-    if (!celebrateIfDone(list, next, fid)) haptic("light");
+    if (!celebrateIfDone(list, next, fid)) buzz("light");
   }
 
   // Termine l'élément en cours (ou celui donné) et lance le suivant
@@ -1478,7 +1600,7 @@ export default function App() {
     const next = list.map((fr) => (fr.id === fid ? { ...fr, games } : fr));
     persist(next);
     offerUndo(list, `${current.name} : Terminé`);
-    if (!celebrateIfDone(list, next, fid)) haptic("light");
+    if (!celebrateIfDone(list, next, fid)) buzz("light");
   }
 
   // --- Glisser-déposer (appui long) et glisser latéral ---
@@ -1524,7 +1646,7 @@ export default function App() {
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
       window.addEventListener("pointercancel", onUp);
-      haptic("light");
+      buzz("light");
     }, 350);
     function mv(ev) {
       if (ev.pointerId !== pid) return;
@@ -1572,7 +1694,7 @@ export default function App() {
       el.style.transform = `translateX(${x}px)`;
       wrap.dataset.dir = x > 0 ? "right" : "left";
       const nowArmed = x > 80 || x < -70;
-      if (nowArmed && !armed) haptic("light");
+      if (nowArmed && !armed) buzz("light");
       armed = nowArmed;
     };
     const up = (ev) => {
@@ -1749,6 +1871,15 @@ export default function App() {
     return { totalGames, totalDone, pct: totalGames ? Math.round((totalDone / totalGames) * 100) : 0 };
   }, [franchises]);
 
+  const catStats = useMemo(
+    () =>
+      CATEGORIES.map((c) => {
+        const items = franchises.flatMap((f) => f.games.filter((g) => normalizeCategory(g.category) === c.key));
+        return { ...c, total: items.length, done: items.filter((g) => g.status === "done").length };
+      }),
+    [franchises]
+  );
+
   const { activeFranchises, pausedFranchises, searchedCount } = useMemo(() => {
     const q = dq.trim().toLowerCase();
     const searched = q ? franchises.filter((f) => f.name.toLowerCase().includes(q) || f.games.some((g) => g.name.toLowerCase().includes(q))) : franchises;
@@ -1842,6 +1973,7 @@ export default function App() {
       swipeOpenId: has(swipeOpenId) ? swipeOpenId : null,
       celebrate: celebrateId === f.id,
       compact,
+      platforms,
       act,
       refs,
     };
@@ -1849,7 +1981,7 @@ export default function App() {
 
   const DiceIcon = [Dice1, Dice2, Dice3, Dice4, Dice5, Dice6][diceFace - 1];
   const sheetFranchise = sheet ? franchises.find((f) => f.id === sheet.fid) : null;
-  const showCarousel = playingItems.length > 0 && !dq.trim();
+  const showCarousel = showCarouselPref && playingItems.length > 0 && !dq.trim();
 
   return (
     <div className="rota-root min-h-screen w-full" style={{ background: T.surface, color: T.onSurface, fontFamily: FONT, overflowX: "hidden" }}>
@@ -1946,7 +2078,7 @@ export default function App() {
             </div>
 
 
-            {loaded && franchises.length > 0 && (!lastBackup || daysSince(lastBackup) >= 30) && Date.now() > backupSnooze && (
+            {loaded && backupReminder && franchises.length > 0 && (!lastBackup || daysSince(lastBackup) >= 30) && Date.now() > backupSnooze && (
               <div className="flex items-center gap-3 rounded-2xl mt-3" style={{ background: T.surfaceContainerHigh, padding: "8px 4px 8px 16px" }}>
                 <AlertCircle size={20} color={T.primary} className="shrink-0" />
                 <div className="flex flex-col flex-1 min-w-0">
@@ -2095,86 +2227,254 @@ export default function App() {
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-md px-4" style={{ paddingBottom: "calc(32px + env(safe-area-inset-bottom))" }}>
-            <div className="px-4" style={{ fontSize: 14, fontWeight: 600, color: T.primary, margin: "8px 0 8px" }}>
-              Apparence
-            </div>
-            <div className="rounded-3xl p-4" style={{ background: T.surfaceContainer }}>
-              <div style={{ fontSize: 16, marginBottom: 4 }}>Couleur de l'app</div>
-              <div style={{ fontSize: 13, color: T.onSurfaceVariant, marginBottom: 16 }}>Chaque licence a aussi sa propre couleur : appuie sur « Modifier » dans la licence.</div>
-              <div className="grid gap-y-4" style={{ gridTemplateColumns: "repeat(4, minmax(0, 1fr))", justifyItems: "center" }}>
-                {ACCENTS.map((a) => {
-                  const on = accentKey === a.key;
+          <main className="mx-auto w-full max-w-md px-4" style={{ paddingBottom: "calc(40px + env(safe-area-inset-bottom))" }}>
+            {/* Ta collection */}
+            <div className="rounded-3xl p-5 mt-1 flex flex-col gap-4" style={{ background: T.primaryContainer, color: T.onPrimaryContainer }}>
+              <div className="flex items-center gap-3">
+                <img src={LOGO_DATA_URI} alt="" width={40} height={40} draggable={false} style={{ borderRadius: 12, display: "block" }} />
+                <div className="flex flex-col min-w-0">
+                  <span style={{ fontSize: 20, fontWeight: 650 }}>Ta collection</span>
+                  <span style={{ fontSize: 13, opacity: 0.85 }}>{lastBackup ? `Sauvegardée ${sinceLabel(lastBackup)}` : "Jamais sauvegardée"}</span>
+                </div>
+              </div>
+              <div className="grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
+                {[
+                  ["Licences", franchises.length],
+                  ["Éléments", stats.totalGames],
+                  ["Terminés", `${stats.pct} %`],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-2xl flex flex-col min-w-0" style={{ background: "rgba(0,0,0,0.22)", padding: "10px 12px" }}>
+                    <span style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{value}</span>
+                    <span style={{ fontSize: 12, opacity: 0.85 }}>{label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap" style={{ columnGap: 16, rowGap: 4, fontSize: 13 }}>
+                {catStats.map((c) => {
+                  const Icon = c.Icon;
                   return (
-                    <button key={a.key} onClick={() => selectAccent(a.key)} aria-label={a.label} className="press flex flex-col items-center gap-2">
-                      <span
-                        className="flex items-center justify-center rounded-full"
+                    <span key={c.key} className="flex items-center gap-1.5">
+                      <Icon size={15} />
+                      {c.done}/{c.total} {c.label}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+
+            <SectionLabel T={T}>Apparence</SectionLabel>
+            <SettingsGroup T={T}>
+              <div className="flex flex-col" style={{ padding: 16, gap: 16 }}>
+                <div className="flex items-center" style={{ gap: 16 }}>
+                  <span className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 40, height: 40, background: LIC_COLORS[6].c3, color: LIC_COLORS[6].text }}>
+                    <Palette size={20} />
+                  </span>
+                  <span className="flex flex-col min-w-0">
+                    <span style={{ fontSize: 16, lineHeight: "22px" }}>Couleur de l'app</span>
+                    <span style={{ fontSize: 13, lineHeight: "18px", color: T.onSurfaceVariant }}>Chaque licence garde sa propre couleur</span>
+                  </span>
+                </div>
+                <div className="grid" style={{ gridTemplateColumns: "repeat(8, minmax(0, 1fr))", justifyItems: "center" }}>
+                  {ACCENTS.map((a) => {
+                    const on = accentKey === a.key;
+                    return (
+                      <button
+                        key={a.key}
+                        onClick={() => selectAccent(a.key)}
+                        aria-label={a.label}
+                        className="press flex items-center justify-center rounded-full"
                         style={{
-                          width: 44,
-                          height: 44,
+                          width: 34,
+                          height: 34,
                           background: a.primary,
                           color: a.onPrimary,
                           boxShadow: on ? `0 0 0 3px ${T.surfaceContainer}, 0 0 0 5px ${a.primary}` : "none",
                           transition: "box-shadow 200ms ease",
                         }}
                       >
-                        {on && <Check size={20} strokeWidth={2.5} />}
-                      </span>
-                      <span style={{ fontSize: 12, color: on ? T.onSurface : T.onSurfaceVariant }}>{a.label}</span>
-                    </button>
-                  );
-                })}
+                        {on && <Check size={16} strokeWidth={2.8} />}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+              <SettingRow
+                T={T}
+                icon={<LayoutList size={20} />}
+                tint={{ bg: LIC_COLORS[6].c3, fg: LIC_COLORS[6].text }}
+                title="Mode compact"
+                sub="Lignes et cartes plus fines"
+                right={<Switch on={compact} T={T} />}
+                onClick={toggleCompact}
+              />
+              <SettingRow
+                T={T}
+                icon={<Play size={20} />}
+                tint={{ bg: LIC_COLORS[6].c3, fg: LIC_COLORS[6].text }}
+                title="Section « En cours »"
+                sub="Le carrousel en haut de l'accueil"
+                right={<Switch on={showCarouselPref} T={T} />}
+                onClick={() => toggleSetting("rota-carousel", !showCarouselPref, setShowCarouselPref)}
+              />
+            </SettingsGroup>
 
-            <div className="px-4" style={{ fontSize: 14, fontWeight: 600, color: T.primary, margin: "24px 0 8px" }}>
-              Données
-            </div>
-            <div className="rounded-3xl overflow-hidden" style={{ background: T.surfaceContainer }}>
-              {[
-                { icon: <Download size={22} />, title: "Exporter mes données", sub: `Dernière sauvegarde : ${sinceLabel(lastBackup)}`, onClick: handleExport },
-                {
-                  icon: <Upload size={22} />,
-                  title: "Importer une sauvegarde",
-                  sub: "Ajoute les licences absentes, n'écrase rien",
-                  onClick: () => fileInputRef.current && fileInputRef.current.click(),
-                },
-              ].map((it) => (
-                <button key={it.title} onClick={it.onClick} className="m3-btn w-full flex items-center gap-4 px-4 text-left" style={{ minHeight: 72, color: T.onSurface }}>
-                  <span className="shrink-0" style={{ color: T.onSurfaceVariant }}>
-                    {it.icon}
-                  </span>
-                  <span className="flex flex-col min-w-0">
-                    <span style={{ fontSize: 16 }}>{it.title}</span>
-                    <span style={{ fontSize: 14, color: T.onSurfaceVariant }}>{it.sub}</span>
-                  </span>
-                </button>
-              ))}
-              <input ref={fileInputRef} type="file" accept="application/json,.json" className="hidden" onChange={handleImportFile} />
-            </div>
+            <SectionLabel T={T}>Comportement</SectionLabel>
+            <SettingsGroup T={T}>
+              <SettingRow
+                T={T}
+                icon={<Vibrate size={20} />}
+                tint={{ bg: LIC_COLORS[4].c3, fg: LIC_COLORS[4].text }}
+                title="Vibrations"
+                sub="Au toucher, au glisser et à 100 %"
+                right={<Switch on={hapticsOn} T={T} />}
+                onClick={() => toggleSetting("rota-haptics", !hapticsOn, setHapticsOn)}
+              />
+              <div>
+                <SettingRow
+                  T={T}
+                  icon={<Gamepad2 size={20} />}
+                  tint={{ bg: LIC_COLORS[4].c3, fg: LIC_COLORS[4].text }}
+                  title="Plateformes proposées"
+                  sub={platforms.length ? platforms.join(", ") : "Aucune"}
+                  right={
+                    <span style={{ color: T.onSurfaceVariant, transform: openSetting === "platforms" ? "rotate(90deg)" : "none", transition: `transform 240ms ${EASE}`, display: "flex" }}>
+                      <ChevronRight size={20} />
+                    </span>
+                  }
+                  onClick={() => setOpenSetting((o) => (o === "platforms" ? null : "platforms"))}
+                />
+                <Collapse open={openSetting === "platforms"} ms={240}>
+                  <div className="flex flex-col gap-3" style={{ padding: "0 16px 16px 72px" }}>
+                    <div className="flex flex-wrap gap-2">
+                      {platforms.map((pl) => (
+                        <span
+                          key={pl}
+                          className="flex items-center gap-1 rounded-lg"
+                          style={{ height: 32, padding: "0 4px 0 12px", fontSize: 13, fontWeight: 500, background: T.surfaceContainerHighest, color: T.onSurface }}
+                        >
+                          {pl}
+                          <button
+                            onClick={() => savePlatforms(platforms.filter((x) => x !== pl))}
+                            aria-label={`Retirer ${pl}`}
+                            className="m3-btn rounded-full flex items-center justify-center"
+                            style={{ width: 24, height: 24, color: T.onSurfaceVariant }}
+                          >
+                            <X size={14} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-1 rounded-full pl-4 min-w-0" style={{ height: 44, paddingRight: 4, background: T.surfaceContainerHighest }}>
+                      <input
+                        value={newPlatformInput}
+                        onChange={(e) => setNewPlatformInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && addPlatform()}
+                        placeholder="Ajouter (ex. : 3DS, PS Vita)"
+                        className="flex-1 min-w-0 bg-transparent outline-none"
+                        style={{ color: T.onSurface, fontSize: 14 }}
+                      />
+                      <button
+                        onClick={addPlatform}
+                        aria-label="Ajouter la plateforme"
+                        className="m3-btn press shrink-0 rounded-full flex items-center justify-center"
+                        style={{ width: 36, height: 36, background: T.primary, color: T.onPrimary }}
+                      >
+                        <Plus size={18} />
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => savePlatforms(PLATFORM_PRESETS)}
+                      className="m3-btn self-start rounded-full px-3"
+                      style={{ height: 32, fontSize: 13, fontWeight: 600, color: T.primary }}
+                    >
+                      Rétablir la liste de départ
+                    </button>
+                  </div>
+                </Collapse>
+              </div>
+            </SettingsGroup>
 
-            <div className="px-4" style={{ fontSize: 14, fontWeight: 600, color: T.primary, margin: "24px 0 8px" }}>
-              Gestes
-            </div>
-            <div className="rounded-3xl p-4 flex flex-col gap-3" style={{ background: T.surfaceContainer, fontSize: 14, color: T.onSurfaceVariant, lineHeight: "20px" }}>
-              <span>
-                <b style={{ color: T.onSurface, fontWeight: 600 }}>Glisser à droite</b> sur un élément : statut suivant
-              </span>
-              <span>
-                <b style={{ color: T.onSurface, fontWeight: 600 }}>Glisser à gauche</b> : modifier, dupliquer, supprimer
-              </span>
-              <span>
-                <b style={{ color: T.onSurface, fontWeight: 600 }}>Appui long</b> : déplacer un élément ou une licence
-              </span>
-              <span>
-                <b style={{ color: T.onSurface, fontWeight: 600 }}>Toucher le point</b> de la chronologie : changer le statut
-              </span>
-            </div>
+            <SectionLabel T={T}>Données</SectionLabel>
+            <SettingsGroup T={T}>
+              <SettingRow
+                T={T}
+                icon={<Download size={20} />}
+                tint={{ bg: LIC_COLORS[5].c3, fg: LIC_COLORS[5].text }}
+                title="Exporter mes données"
+                sub={`Dernière sauvegarde : ${sinceLabel(lastBackup)}`}
+                onClick={handleExport}
+              />
+              <SettingRow
+                T={T}
+                icon={<Upload size={20} />}
+                tint={{ bg: LIC_COLORS[5].c3, fg: LIC_COLORS[5].text }}
+                title="Importer une sauvegarde"
+                sub="Ajoute les licences absentes, n'écrase rien"
+                onClick={() => fileInputRef.current && fileInputRef.current.click()}
+              />
+              <SettingRow
+                T={T}
+                icon={<BellRing size={20} />}
+                tint={{ bg: LIC_COLORS[5].c3, fg: LIC_COLORS[5].text }}
+                title="Rappel de sauvegarde"
+                sub="Si tu n'as pas sauvegardé depuis 30 jours"
+                right={<Switch on={backupReminder} T={T} />}
+                onClick={() => toggleSetting("rota-backup-reminder", !backupReminder, setBackupReminder)}
+              />
+              <SettingRow
+                T={T}
+                danger
+                icon={<Eraser size={20} />}
+                tint={{ bg: "#5C1A1A", fg: T.danger }}
+                title="Tout effacer"
+                sub="Supprime toutes les licences de l'app"
+                onClick={() => setConfirmDelete({ type: "all", label: "" })}
+              />
+            </SettingsGroup>
+            <input ref={fileInputRef} type="file" accept="application/json,.json" className="hidden" onChange={handleImportFile} />
 
-            <div className="flex items-center justify-center gap-2" style={{ marginTop: 40 }}>
-              <img src={LOGO_DATA_URI} alt="" width={20} height={20} draggable={false} style={{ borderRadius: 6 }} />
-              <span style={{ fontSize: 13, color: T.onSurfaceVariant }}>Rota</span>
-            </div>
+            <SectionLabel T={T}>Aide</SectionLabel>
+            <SettingsGroup T={T}>
+              <div>
+                <SettingRow
+                  T={T}
+                  icon={<Hand size={20} />}
+                  tint={{ bg: LIC_COLORS[2].c3, fg: LIC_COLORS[2].text }}
+                  title="Gestes"
+                  sub="Glisser, appui long, chronologie"
+                  right={
+                    <span style={{ color: T.onSurfaceVariant, transform: openSetting === "gestures" ? "rotate(90deg)" : "none", transition: `transform 240ms ${EASE}`, display: "flex" }}>
+                      <ChevronRight size={20} />
+                    </span>
+                  }
+                  onClick={() => setOpenSetting((o) => (o === "gestures" ? null : "gestures"))}
+                />
+                <Collapse open={openSetting === "gestures"} ms={240}>
+                  <div className="flex flex-col gap-2" style={{ padding: "0 16px 16px 72px", fontSize: 14, lineHeight: "20px", color: T.onSurfaceVariant }}>
+                    {[
+                      ["Glisser à droite", "statut suivant"],
+                      ["Glisser à gauche", "modifier, dupliquer, supprimer"],
+                      ["Appui long", "déplacer un élément ou une licence"],
+                      ["Toucher le point", "changer le statut"],
+                      ["Retour Android", "ferme le panneau ouvert, puis revient à l'accueil"],
+                    ].map(([a, b]) => (
+                      <span key={a}>
+                        <b style={{ color: T.onSurface, fontWeight: 600 }}>{a}</b> : {b}
+                      </span>
+                    ))}
+                  </div>
+                </Collapse>
+              </div>
+              <div className="flex items-center" style={{ minHeight: 72, gap: 16, padding: "8px 16px" }}>
+                <span className="shrink-0 flex items-center justify-center rounded-full" style={{ width: 40, height: 40, background: LIC_COLORS[2].c3, color: LIC_COLORS[2].text }}>
+                  <Info size={20} />
+                </span>
+                <span className="flex flex-col flex-1 min-w-0">
+                  <span style={{ fontSize: 16, lineHeight: "22px" }}>Rota</span>
+                  <span style={{ fontSize: 13, lineHeight: "18px", color: T.onSurfaceVariant }}>Version 2.0 · tes données restent sur ce téléphone</span>
+                </span>
+              </div>
+            </SettingsGroup>
           </main>
         </div>
       )}
@@ -2283,7 +2583,7 @@ export default function App() {
                       T={T}
                       onEnter={commitSheet}
                     />
-                    <PlatformChips value={editPlatform} onPick={setEditPlatform} T={T} />
+                    <PlatformChips value={editPlatform} onPick={setEditPlatform} T={T} presets={platforms} />
                   </>
                 )}
               </>
@@ -2408,9 +2708,13 @@ export default function App() {
       <Overlay open={!!confirmDelete} onClose={() => setConfirmDelete(null)} T={T}>
         {confirmDelete && (
           <div className="p-6 flex flex-col gap-4">
-            <span style={{ fontSize: 22, lineHeight: "28px", fontWeight: 500 }}>Supprimer {confirmDelete.type === "franchise" ? "la licence" : "l'élément"} ?</span>
+            <span style={{ fontSize: 22, lineHeight: "28px", fontWeight: 500 }}>
+              {confirmDelete.type === "all" ? "Tout effacer ?" : `Supprimer ${confirmDelete.type === "franchise" ? "la licence" : "l'élément"} ?`}
+            </span>
             <span style={{ fontSize: 14, color: T.onSurfaceVariant, lineHeight: "20px" }}>
-              « {confirmDelete.label} » sera supprimé{confirmDelete.type === "franchise" ? "e avec tout son contenu" : ""}. Cette action est irréversible.
+              {confirmDelete.type === "all"
+                ? "Toutes tes licences et leur contenu seront supprimés. Exporte une sauvegarde avant si tu veux pouvoir les récupérer."
+                : `« ${confirmDelete.label} » sera supprimé${confirmDelete.type === "franchise" ? "e avec tout son contenu" : ""}. Cette action est irréversible.`}
             </span>
             <div className="flex items-center justify-end gap-2 pt-2">
               <button onClick={() => setConfirmDelete(null)} className="m3-btn rounded-full px-4" style={{ height: 40, fontSize: 14, fontWeight: 600, color: T.primary }}>
